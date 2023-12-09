@@ -178,9 +178,11 @@ trainingResults <- trainingResults %>%
 ```
 
 ```{r}
+
 library(janitor)
 library(knitr)
 library(kableExtra)
+
 
 # Build Confusion Matrix for Model 1 ----
 trainingResults %>%
@@ -206,6 +208,7 @@ trainingResults %>%
 
 
 
+<<<<<<< HEAD
 ```{r}
 as.data.frame(summary(model2)$coefficients) %>%
   rownames_to_column(var = "term") %>%
@@ -493,6 +496,13 @@ testingData %>%
   )
 
 ```
+=======
+
+
+
+
+
+>>>>>>> 793d4efb304c5b648c0d9bf71ce68ec207eb31c2
 
 
 
