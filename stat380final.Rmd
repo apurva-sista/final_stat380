@@ -3,16 +3,512 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
 ```{r}
-plot(cars)
+library(dplyr)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+```{r}
+# Load packages used in this guide ----
+packages <- c("tidyverse", "knitr", "kableExtra", "leaps",
+              "car", "psych", "DescTools", "pROC", "yardstick", "separationplot")
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+invisible(
+  lapply( 
+    X = packages,
+    FUN = library,
+    character.only = TRUE,
+    quietly = TRUE
+  )
+)
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+# Set Table Option ----
+options(knitr.kable.NA = "") 
+```
+
+
+```{r}
+#urlfle <- "https://github.com/apurva-sista/final_stat380/blob/main/dataset-of-00s%20(1).csv"
+df1 <- read.csv("dataset-of-00s (1).csv")
+df2 <- read.csv("dataset-of-10s (1).csv")
+
+```
+
+
+```{r}
+
+df3 <- rbind(df1,df2)
+```
+
+```{r}
+
+sum(is.na(df3))
+```
+
+
+```{r}
+# Load necessary libraries
+library(corrplot)
+
+# Assuming df3 is your dataframe
+# Select only the columns that are numeric
+df3_numeric <- df3[sapply(df3, is.numeric)]
+
+# Compute the correlation matrix for the numeric columns
+cor_matrix <- cor(df3_numeric, use = "complete.obs") # 'use' argument handles missing values
+
+# Visualize the correlation matrix using corrplot
+corrplot(cor_matrix, method = "circle")
+
+
+```
+
+```{r}
+modelData <- df3 %>%
+  drop_na() %>%
+  mutate(
+    tempID = row_number()
+  )
+
+set.seed(380)
+trainingData <- modelData %>%
+  slice_sample(prop = 0.8)
+
+trainingResults <- trainingData
+
+testingData <- modelData %>%
+  filter(!(tempID %in% trainingData$tempID))
+
+```
+
+```{r}
+# General Structure of glm call ----
+model1 <- glm(
+  formula = target ~ energy,
+  data = trainingData,
+  family = binomial,
+  na.action = "na.omit"
+)
+```
+
+
+```{r}
+
+# Form Candidate Model 2 ----
+## Lower bound
+### Intercept only
+lower <- glm(
+  formula = target ~ 1,
+  data = trainingData,
+  family = binomial
+)
+## Upper bound
+### All quantities crossed with species plus island
+upper <- glm(
+  formula = target ~ (acousticness + instrumentalness + duration_ms + chorus_hit + liveness),
+  data = trainingData,
+  family = binomial
+)
+
+## Stepwise search
+model2 <- step(
+  object = lower,
+  scope = list(
+    lower = lower,
+    upper = upper
+  ),
+  data = trainingData,
+  direction = "both",
+  k = 2,
+  trace = 0
+)
+```
+
+```{r}
+# Model 1 Coefficient Table ----
+as.data.frame(summary(model1)$coefficients) %>%
+  rownames_to_column(var = "term") %>%
+  rename(coefficient = Estimate) %>% 
+  mutate(
+    prob_odds = case_when(
+      coefficient == "(Intercept)" ~ exp(coefficient)/(1 + exp(coefficient)),
+      .default = exp(coefficient)
+    ),
+    .after = coefficient
+  ) %>%
+  kable(
+    digits = 3,
+    booktabs = TRUE,
+    align = c("l", rep("c", 5)),
+    col.names = c("Term", "Coefficient", "Prob./Odds Ratio",
+                  "Std. Err.", "Z", "p-value"),
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    position = "center",
+    bootstrap_options = "condensed",
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+```
+
+```{r}
+model1CI <- confint(
+  object = model1,
+  parm = "energy",
+  level = 0.9
+)
+
+# Stored fitted values for Model 1 ----
+trainingResults$model1Pred <- predict(
+  object = model1,
+  newdata = trainingData,
+  type = "response"
+)
+
+# Apply naïve rule ----
+trainingResults <- trainingResults %>%
+  mutate(
+    model1Class = case_when(
+      model1Pred > 0.5 ~ 1,
+      .default = 0
+    )
+  )
+
+```
+
+```{r}
+library(janitor)
+library(knitr)
+library(kableExtra)
+
+# Build Confusion Matrix for Model 1 ----
+trainingResults %>%
+  tabyl(var1 = model1Class, var2 = target) %>%
+  adorn_title(
+    placement = "combined",
+    row_name = "Predicted",
+    col_name = "Actual"
+  ) %>%
+  kable(
+    booktabs = TRUE,
+    align = "c",
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    position = "center",
+    bootstrap_options = "condensed",
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+
+```
+
+
+
+```{r}
+as.data.frame(summary(model2)$coefficients) %>%
+  rownames_to_column(var = "term") %>%
+  rename(coefficient = Estimate) %>% 
+  mutate(
+    prob_odds = case_when(
+      coefficient == "(Intercept)" ~ exp(coefficient)/(1 + exp(coefficient)),
+      .default = exp(coefficient)
+    ),
+    .after = coefficient
+  ) %>%
+  mutate(
+    `Pr(>|z|)` = ifelse(
+      test = `Pr(>|z|)` < 0.001,
+      yes = paste("< 0.001"),
+      no = round(`Pr(>|z|)`, 3)
+    ),
+    term = case_when(
+      term == "(Intercept)" ~ "Intercept",
+      grepl(x = term, pattern = "instrumentalness") ~ "instrumentalness",
+      grepl(x = term, pattern = "acousticness") ~ "acousticness",
+      grepl(x = term, pattern = "duration_ms") ~ "duration_ms",
+      .default = term
+    )
+  ) %>%
+  kable(
+    digits = 3,
+    booktabs = TRUE,
+    align = c("l", rep("c", 5)),
+    col.names = c("Term", "Coefficient", "Prob./Odds Ratio",
+                  "Std. Err.", "Z", "p-value"),
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    position = "center",
+    bootstrap_options = "condensed",
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+```
+
+```{r}
+ggplot(
+  data = data.frame(
+    residuals = residuals(model2, type = "pearson"),
+    fitted = fitted(model2)
+  ),
+  mapping = aes(x = fitted, y = residuals)
+) +
+  geom_point() +
+  geom_smooth(
+    formula = y ~ x,
+    method = stats::loess,
+    method.args = list(degree = 1),
+    se = FALSE,
+    linewidth = 0.5
+  ) +
+  theme_bw() +
+  labs(
+    x = "Fitted",
+    y = "Pearson Residuals"
+  ) 
+```
+
+```{r}
+
+```
+
+```{r}
+summary_df <- as.data.frame(summary(model2)$coefficients) %>%
+rownames_to_column(var = "term") %>%
+rename(coefficient = Estimate) %>%
+mutate(
+prob_odds = case_when(
+coefficient == "(Intercept)" ~ exp(coefficient)/(1 + exp(coefficient)),
+.default = exp(coefficient)
+),
+.after = coefficient
+) %>%
+mutate(
+`Pr(>|z|)` = ifelse(
+test = `Pr(>|z|)` < 0.001,
+yes = paste("< 0.001"),
+no = round(`Pr(>|z|)`, 3)
+),
+term = case_when(
+term == "(Intercept)" ~ "Intercept",
+      grepl(x = term, pattern = "instrumentalness") ~ "instrumentalness",
+      grepl(x = term, pattern = "acousticness") ~ "acousticness",
+      grepl(x = term, pattern = "duration_ms") ~ "duration_ms",
+.default = term
+)
+)
+
+```
+
+```{r}
+trainingResults$model2Pred <- predict(
+  object = model2,
+  newdata = trainingData,
+  type = "response"
+)
+
+trainingResults <- trainingResults %>%
+  mutate(
+    model2Class = case_when(
+      model2Pred > 0.5 ~ 1,
+      .default = 0
+    )
+  )
+```
+
+```{r}
+
+trainingResults %>%
+  tabyl(var1 = model2Class, var2 = target) %>%
+  adorn_title(
+    placement = "combined",
+    row_name = "Predicted",
+    col_name = "Actual"
+  ) %>%
+  kable(
+    booktabs = TRUE,
+    align = "c",
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    position = "center",
+    bootstrap_options = "condensed",
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+
+```
+
+
+```{r}
+model1ROC <- roc(
+  formula = target ~ model1Pred,
+  data = trainingResults
+)
+model1ROC_df <- data.frame(
+  threshold = model1ROC$thresholds,
+  sensitivity = model1ROC$sensitivities,
+  specificity = model1ROC$specificities,
+  model = "Model 1"
+)
+
+```
+
+```{r}
+model2ROC <- roc(
+  formula = target ~ model2Pred,
+  data = trainingResults
+)
+model2ROC_df <- data.frame(
+  threshold = model2ROC$thresholds,
+  sensitivity = model2ROC$sensitivities,
+  specificity = model2ROC$specificities,
+  model = "Model 2"
+)
+
+```
+```{r}
+rocData <- rbind(model1ROC_df, model2ROC_df)
+
+```
+
+```{r}
+aucData <- data.frame(
+  model = c("Model 1", "Model 2"),
+  auc = c(model1ROC$auc, model2ROC$auc)
+)
+```
+
+
+```{r}
+
+
+ggplot(
+  data = rocData,
+  mapping = aes(x = 1 - specificity, y = sensitivity, color = model)
+) +
+  geom_path() +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dotted"
+  ) +
+  geom_text(
+    inherit.aes = FALSE,
+    data = aucData,
+    mapping = aes(label = paste(model, "AUC: \n", round(auc, 3))),
+    x = c(0.25, 0.25),
+    y = c(0.4, 0.9)
+  ) +
+  theme_bw() +
+  coord_fixed()
+```
+
+
+```{r}
+
+trainingResults <- trainingResults %>%
+  mutate(
+    targetNum = case_when(
+      target == 0 ~ 0,
+      target == 1 ~ 1
+    ),
+    .after = target
+  ) # separationplot requies actual to be numeric 0/1
+par(mfrow = c(1, 2), mar = c(4,0,4,0))
+
+```
+
+```{r}
+separationplot(
+  pred = trainingResults$model1Pred, 
+  actual = trainingResults$targetNum, 
+  type = "line", 
+  line = TRUE, 
+  show.expected = TRUE, 
+  heading = "Model 1",
+  newplot = FALSE
+)
+
+```
+
+```{r}
+## Model 2
+separationplot(
+  pred = trainingResults$model2Pred, 
+  actual = trainingResults$targetNum, 
+  type = "line", 
+  line = TRUE, 
+  show.expected = TRUE, 
+  heading = "Model 2",
+  newplot = FALSE
+)
+```
+
+```{r}
+testingData <- testingData %>%
+  mutate(
+    targetNum = case_when(
+      target == 0 ~ 0,
+      target == 1 ~ 1
+    ),
+    .after = target
+  )
+testingData$predict <- predict(
+  object = model2,
+  newdata = testingData,
+  type = "response"
+)
+testingData <- testingData %>%
+  mutate(
+    model2Class = case_when(
+      predict > 0.5 ~ 1,
+      .default = 0
+    )
+  )
+
+```
+
+
+```{r}
+testingData %>%
+  tabyl(var1 = model2Class, var2 = target) %>%
+  adorn_title(
+    placement = "combined",
+    row_name = "Predicted",
+    col_name = "Actual"
+  ) %>%
+  kable(
+    booktabs = TRUE,
+    align = "c",
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    position = "center",
+    bootstrap_options = "condensed",
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
