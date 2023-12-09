@@ -3,16 +3,227 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
 ```{r}
-plot(cars)
+library(dplyr)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+```{r}
+# Load packages used in this guide ----
+packages <- c("tidyverse", "knitr", "kableExtra", "leaps",
+              "car", "psych", "DescTools", "pROC", "yardstick", "separationplot")
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+invisible(
+  lapply( 
+    X = packages,
+    FUN = library,
+    character.only = TRUE,
+    quietly = TRUE
+  )
+)
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+# Set Table Option ----
+options(knitr.kable.NA = "") 
+```
+
+
+```{r}
+#urlfle <- "https://github.com/apurva-sista/final_stat380/blob/main/dataset-of-00s%20(1).csv"
+df1 <- read.csv("dataset-of-00s (1).csv")
+df2 <- read.csv("dataset-of-10s (1).csv")
+
+```
+
+
+```{r}
+
+df3 <- rbind(df1,df2)
+```
+
+```{r}
+
+sum(is.na(df3))
+```
+
+
+```{r}
+# Load necessary libraries
+library(corrplot)
+
+# Assuming df3 is your dataframe
+# Select only the columns that are numeric
+df3_numeric <- df3[sapply(df3, is.numeric)]
+
+# Compute the correlation matrix for the numeric columns
+cor_matrix <- cor(df3_numeric, use = "complete.obs") # 'use' argument handles missing values
+
+# Visualize the correlation matrix using corrplot
+corrplot(cor_matrix, method = "circle")
+
+
+```
+
+```{r}
+modelData <- df3 %>%
+  drop_na() %>%
+  mutate(
+    tempID = row_number()
+  )
+
+set.seed(380)
+trainingData <- modelData %>%
+  slice_sample(prop = 0.8)
+
+trainingResults <- trainingData
+
+testingData <- modelData %>%
+  filter(!(tempID %in% trainingData$tempID))
+
+```
+
+```{r}
+# General Structure of glm call ----
+model1 <- glm(
+  formula = target ~ energy,
+  data = trainingData,
+  family = binomial,
+  na.action = "na.omit"
+)
+```
+
+
+```{r}
+
+# Form Candidate Model 2 ----
+## Lower bound
+### Intercept only
+lower <- glm(
+  formula = target ~ 1,
+  data = trainingData,
+  family = binomial
+)
+## Upper bound
+### All quantities crossed with species plus island
+upper <- glm(
+  formula = target ~ (acousticness + instrumentalness + duration_ms),
+  data = trainingData,
+  family = binomial
+)
+
+## Stepwise search
+model2 <- step(
+  object = lower,
+  scope = list(
+    lower = lower,
+    upper = upper
+  ),
+  data = trainingData,
+  direction = "both",
+  k = 2,
+  trace = 0
+)
+```
+
+```{r}
+# Model 1 Coefficient Table ----
+as.data.frame(summary(model1)$coefficients) %>%
+  rownames_to_column(var = "term") %>%
+  rename(coefficient = Estimate) %>% 
+  mutate(
+    prob_odds = case_when(
+      coefficient == "(Intercept)" ~ exp(coefficient)/(1 + exp(coefficient)),
+      .default = exp(coefficient)
+    ),
+    .after = coefficient
+  ) %>%
+  kable(
+    digits = 3,
+    booktabs = TRUE,
+    align = c("l", rep("c", 5)),
+    col.names = c("Term", "Coefficient", "Prob./Odds Ratio",
+                  "Std. Err.", "Z", "p-value"),
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    position = "center",
+    bootstrap_options = "condensed",
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+```
+
+```{r}
+model1CI <- confint(
+  object = model1,
+  parm = "energy",
+  level = 0.9
+)
+
+# Stored fitted values for Model 1 ----
+trainingResults$model1Pred <- predict(
+  object = model1,
+  newdata = trainingData,
+  type = "response"
+)
+
+# Apply naïve rule ----
+trainingResults <- trainingResults %>%
+  mutate(
+    model1Class = case_when(
+      model1Pred > 0.5 ~ 1,
+      .default = 0
+    )
+  )
+
+```
+
+```{r}
+
+# Build Confusion Matrix for Model 1 ----
+trainingResults %>%
+  tabyl(var1 = model1Class, var2 = target) %>%
+  adorn_title(
+    placement = "combined",
+    row_name = "Predicted",
+    col_name = "Actual"
+  ) %>%
+  kable(
+    booktabs = TRUE,
+    align = "c",
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    position = "center",
+    bootstrap_options = "condensed",
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
