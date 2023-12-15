@@ -3,15 +3,9 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-
 ```{r}
 library(dplyr)
 ```
-
-
-
-
-
 
 ```{r}
 # Load packages used in this guide ----
@@ -31,7 +25,6 @@ invisible(
 options(knitr.kable.NA = "") 
 ```
 
-
 ```{r}
 #urlfle <- "https://github.com/apurva-sista/final_stat380/blob/main/dataset-of-00s%20(1).csv"
 df1 <- read.csv("dataset-of-00s (1).csv")
@@ -39,21 +32,20 @@ df2 <- read.csv("dataset-of-10s (1).csv")
 
 ```
 
-
 ```{r}
 
 df3 <- rbind(df1,df2)
 ```
-EDA:
 
+EDA:
 
 ```{r}
 head(df3)
 ```
+
 ```{r}
 str(df3)
 ```
-
 
 ```{r}
 library(dplyr)
@@ -64,12 +56,10 @@ df3_dropped <- dplyr::select(df3, -artist, -uri, -track)
 head(df3_dropped)
 ```
 
-
 ```{r}
 
 sum(is.na(df3))
 ```
-
 
 ```{r}
 calculate_stats <- function(x) {
@@ -87,8 +77,6 @@ stats <- sapply(df3_dropped, calculate_stats)
 stats
 ```
 
-
-
 ```{r}
 # Load necessary libraries
 library(corrplot)
@@ -105,7 +93,6 @@ corrplot(cor_matrix, method = "circle")
 
 
 ```
-
 
 ```{r}
 # Load necessary libraries
@@ -137,10 +124,7 @@ print(correlation_plot)
 
 ```
 
-
-
 Since the correlation values between any two variables is not greater than 90%, none of the attributes were removed.
-
 
 ```{r}
 # Load necessary libraries
@@ -165,11 +149,6 @@ for (feature in features) {
 ```
 
 From the above cells, it can be concluded that hit songs have high values of loudness, tempo, valence, danceability, energy, time_signature, mode and low values of speechiness, liveness, acousticness, instrumentalness, sections, chorus_hit, duration_ms.
-
-
-
-
-
 
 ```{r}
 modelData <- df3 %>%
@@ -198,7 +177,6 @@ model1 <- glm(
   na.action = "na.omit"
 )
 ```
-
 
 ```{r}
 
@@ -314,9 +292,8 @@ trainingResults %>%
 
 ```
 
+\<\<\<\<\<\<\< HEAD
 
-
-<<<<<<< HEAD
 ```{r}
 as.data.frame(summary(model2)$coefficients) %>%
   rownames_to_column(var = "term") %>%
@@ -379,10 +356,6 @@ ggplot(
     x = "Fitted",
     y = "Pearson Residuals"
   ) 
-```
-
-```{r}
-
 ```
 
 ```{r}
@@ -452,7 +425,6 @@ trainingResults %>%
 
 ```
 
-
 ```{r}
 model1ROC <- roc(
   formula = target ~ model1Pred,
@@ -480,6 +452,7 @@ model2ROC_df <- data.frame(
 )
 
 ```
+
 ```{r}
 rocData <- rbind(model1ROC_df, model2ROC_df)
 
@@ -491,7 +464,6 @@ aucData <- data.frame(
   auc = c(model1ROC$auc, model2ROC$auc)
 )
 ```
-
 
 ```{r}
 
@@ -516,7 +488,6 @@ ggplot(
   theme_bw() +
   coord_fixed()
 ```
-
 
 ```{r}
 
@@ -582,7 +553,6 @@ testingData <- testingData %>%
 
 ```
 
-
 ```{r}
 testingData %>%
   tabyl(var1 = model2Class, var2 = target) %>%
@@ -604,25 +574,3 @@ testingData %>%
   )
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
