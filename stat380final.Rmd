@@ -8,6 +8,11 @@ output: html_notebook
 library(dplyr)
 ```
 
+
+
+
+
+
 ```{r}
 # Load packages used in this guide ----
 packages <- c("tidyverse", "knitr", "kableExtra", "leaps",
@@ -39,11 +44,49 @@ df2 <- read.csv("dataset-of-10s (1).csv")
 
 df3 <- rbind(df1,df2)
 ```
+EDA:
+
+
+```{r}
+head(df3)
+```
+```{r}
+str(df3)
+```
+
+
+```{r}
+library(dplyr)
+
+df3_dropped <- dplyr::select(df3, -artist, -uri, -track)
+
+# Display the first few rows of the modified dataframe
+head(df3_dropped)
+```
+
 
 ```{r}
 
 sum(is.na(df3))
 ```
+
+
+```{r}
+calculate_stats <- function(x) {
+  if (is.numeric(x)) {
+    c(Count = length(x), Mean = mean(x), Std = sd(x), Max = max(x), Min = min(x))
+  } else {
+    NULL
+  }
+}
+
+# Apply the function to each column of the dataset
+stats <- sapply(df3_dropped, calculate_stats)
+
+# Display the statistics
+stats
+```
+
 
 
 ```{r}
@@ -62,6 +105,71 @@ corrplot(cor_matrix, method = "circle")
 
 
 ```
+
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(reshape2) # for melting the correlation matrix into a long format
+
+# Assuming df3 is your data frame after dropping non-numeric columns
+# Calculate Spearman correlation matrix
+spearman_correlation <- cor(df3_numeric, method = "spearman")
+
+# Melt the correlation matrix into a long format
+melted_corr <- melt(spearman_correlation)
+
+# Create the correlation plot with adjustments for readability
+correlation_plot <- ggplot(melted_corr, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") + 
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Spearman\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 5),
+        axis.text.y = element_text(size = 5),
+        axis.title = element_blank(),
+        legend.position = "right") +
+  coord_fixed()
+
+# Display the plot in a larger window in RStudio
+print(correlation_plot)
+
+```
+
+
+
+Since the correlation values between any two variables is not greater than 90%, none of the attributes were removed.
+
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+
+# List of features to plot
+features <- c('danceability', 'energy', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'valence', 'tempo', 'duration_ms')
+
+# Create a function to plot each feature
+plot_feature <- function(feature) {
+  ggplot(df3, aes_string(x=feature)) +
+    geom_histogram(bins=30, fill="blue", color="black", alpha=0.7) +
+    geom_density(color="red") +
+    labs(title=paste('Distribution of', feature), x=feature, y='Frequency')
+}
+
+# Plot each feature in RStudio
+for (feature in features) {
+  print(plot_feature(feature))
+}
+
+```
+
+From the above cells, it can be concluded that hit songs have high values of loudness, tempo, valence, danceability, energy, time_signature, mode and low values of speechiness, liveness, acousticness, instrumentalness, sections, chorus_hit, duration_ms.
+
+
+
+
+
 
 ```{r}
 modelData <- df3 %>%
@@ -496,3 +604,25 @@ testingData %>%
   )
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
