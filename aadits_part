@@ -111,11 +111,18 @@ finalDF <- cbind(
 
 
 ```{r}
+# Make new data frame with just needed columns ----
+df_binary <- df3_numeric %>%
+  dplyr::select(contains("energy"), danceability, target)
+```
+
+
+```{r}
 # Use dist to form the distance matrix for the penguin data ----
 
 df_dist <- dist(
-  x = df3_numeric,
-  method = "euclidean"
+  x = df_binary,
+  method = "maximum" #distance metric
 )
 ```
 
@@ -124,24 +131,23 @@ df_dist <- dist(
 # Hierarchical clustering of Penguins ----
 hc_df <- hclust(
   d = df_dist,
-  method = "complete"
+  method = "complete" #linkage method
 )
 ```
+
 
 ```{r}
 # Base R ----
 plot(hc_df)
 ```
 
+
 ```{r}
-# Add customization to base R via dendrogram object ----
-par(mar = c(4,0,0,0), cex = 0.5)
-plot(
-  as.dendrogram(
-    object = hc_df,
-    hang = -1
-  ), 
-  type = "rectangle",
-  horiz = TRUE
-)
+# Cut hierarchical clustering at 2 and 4 clusters ----
+## Add categorization to my cleaned data
+df3_numeric_2 <- df3_numeric %>%
+  mutate(
+    hc2 = as.factor(cutree(tree = hc_df, k = 2)),
+    hc4 = as.factor(cutree(tree = hc_df, k = 4))
+  )
 ```
