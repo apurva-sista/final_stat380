@@ -4,37 +4,15 @@ output: html_notebook
 authors: "Apurva Sista", "Arya Rao Cheeti", "Aadit Gupta"
 ---
 
-Introduction
-In this project, we will be creating models that can predict if a track is going to be a top 100 hit on Spotify. As undergraduate students, we are constantly looking for music in our daily lives. As such, the kind of music that someone listens to could tell you a lot about the person. Finding out what songs people enjoy listening to (on a global scale) would be able to tell you what the "average person" likes and the general mindset of the world. 
+# Introduction:
 
-This data was a portion of one that was accessed on Kaggle called "The Spotify Hit Predictor Dataset (1960-2019) uploaded by Farooq Ansari. The original dataset included tables for every decade through 1960-2019. However, we decided to use the 2000s and 2010s tables because that is what is most relatable and interesting to us. Each track is labeled as 1 or 0 (hit or flop, respectively). 
+In this project, we will be creating models that can predict if a track is going to be a top 100 hit on Spotify. As undergraduate students, we are constantly looking for music in our daily lives. As such, the kind of music that someone listens to could tell you a lot about the person. Finding out what songs people enjoy listening to (on a global scale) would be able to tell you what the "average person" likes and the general mindset of the world.
 
-For this dataset, a hit is defined as a song that featured in the weekly list (Issued by Billboards) of Hot-100 tracks in the decade at least once. A flop is defined with the following conditions:
-    - track must not appear in the hit list of the decade
-    - track's artist must not appear in the hit list of the decade
-    - track must belong to a genre that is not mainstream
-    - track's genre must not appear in the hit list of the decade
-    - track must have US as one of its markets
+This data was a portion of one that was accessed on Kaggle called "The Spotify Hit Predictor Dataset (1960-2019) uploaded by Farooq Ansari. The original dataset included tables for every decade through 1960-2019. However, we decided to use the 2000s and 2010s tables because that is what is most relatable and interesting to us. Each track is labeled as 1 or 0 (hit or flop, respectively).
 
-The following is a list of columns in the data:
-    - track
-    - artist
-    - uri (resource identifier)
-    - danceability
-    - energy
-    - key (integers map to pitches using standard Pitch Class notation)
-    - loudness
-    - mode (major or minor)
-    - speechiness
-    - acousticness
-    - instrumentalness
-    - liveness
-    - valence (musical positiveness)
-    - tempo (beats per minute)
-    - time signature (how many beats are in each bar)
-    - chorus_hit (when the chorus starts)
-    - sections
-    - target (if the track is a hit or flop)
+For this dataset, a hit is defined as a song that featured in the weekly list (Issued by Billboards) of Hot-100 tracks in the decade at least once. A flop is defined with the following conditions: - track must not appear in the hit list of the decade - track's artist must not appear in the hit list of the decade - track must belong to a genre that is not mainstream - track's genre must not appear in the hit list of the decade - track must have US as one of its markets
+
+The following is a list of columns in the data: - track - artist - uri (resource identifier) - danceability - energy - key (integers map to pitches using standard Pitch Class notation) - loudness - mode (major or minor) - speechiness - acousticness - instrumentalness - liveness - valence (musical positiveness) - tempo (beats per minute) - time signature (how many beats are in each bar) - chorus_hit (when the chorus starts) - sections - target (if the track is a hit or flop)
 
 ```{r}
 library(dplyr)
@@ -69,7 +47,7 @@ df2 <- read.csv("dataset-of-10s (1).csv")
 df3 <- rbind(df1,df2)
 ```
 
-EDA:
+## EDA:
 
 ```{r}
 head(df3)
@@ -78,6 +56,8 @@ head(df3)
 ```{r}
 str(df3)
 ```
+
+Since the dtype is either float64 or int64, the dataset consists of **numerical attributes only**. This information will be helpful in selecting a criterion for removing non-useful features. Some of the non-useful features that were present in the dataset that were not useful were track, artist and uri. For our analysis we have removed these features.
 
 ```{r}
 library(dplyr)
@@ -108,6 +88,8 @@ stats <- sapply(df3_dropped, calculate_stats)
 # Display the statistics
 stats
 ```
+
+As there are **No missing values** were found for any of the columns in the dataset and hence there is no need to fill them.
 
 ```{r}
 # Load necessary libraries
@@ -156,7 +138,9 @@ print(correlation_plot)
 
 ```
 
-Since the correlation values between any two variables is not greater than 90%, none of the attributes were removed.
+Since the correlation values between any two variables is not greater than 90%, none of the attributes were removed. We can observe some of the attributes present in the datatset do have some correlation and hence will yield good results for our models.
+
+These types of plots are useful for quickly identifying relationships between variables in a dataset and can be particularly useful in fields such as musicology, where understanding the relationships between different aspects of music can inform areas like music recommendation algorithms or audio analysis.
 
 ```{r}
 # Load necessary libraries
@@ -180,7 +164,21 @@ for (feature in features) {
 
 ```
 
-From the above cells, it can be concluded that hit songs have high values of loudness, tempo, valence, danceability, energy, time_signature, mode and low values of speechiness, liveness, acousticness, instrumentalness, sections, chorus_hit, duration_ms.
+From the above cells, it can be concluded that hit songs have high values of loudness, tempo, valence, danceability, energy, time_signature, mode and low values of speechiness, liveness, acousticness, instrumentalness, sections, chorus_hit, duration_ms. There is also good variation across most attributes the values as there are many data values.
+
+## CDA:
+
+**What factors if any can be used to predict what a "hit song" could be from the 2000s to the 2010s?**
+
+## Goals:
+
+We are exploring this dataset through multiple approaches including regression, classification and clustering. Supervised learning involves training a model on labeled data, whereas unsupervised learning involves finding structure in unlabeled data.Regression learning predicts continuous outcomes based on input variables, while clustering learning identifies groups within the data without predefined labels.
+
+# Analysis and modelling:
+
+## Part 1: Logistic regression
+
+One important step we need before we start modelling is that the response attributes needs to be dichotomous. This is because logistic regression is a statistical method used for binary classification that predicts the probability of a target variable's binary outcome. It models the relationship between a dependent binary variable and one or more independent variables by estimating probabilities using a logistic function. For this dataset our response variable "target" which indicates if a song was a hit is indeed dichotomous.
 
 ```{r}
 modelData <- df3 %>%
@@ -197,7 +195,6 @@ trainingResults <- trainingData
 
 testingData <- modelData %>%
   filter(!(tempID %in% trainingData$tempID))
-
 ```
 
 ```{r}
@@ -324,7 +321,6 @@ trainingResults %>%
 
 ```
 
-\<\<\<\<\<\<\< HEAD
 
 ```{r}
 as.data.frame(summary(model2)$coefficients) %>%
@@ -607,10 +603,7 @@ testingData %>%
 
 ```
 
-
-
-DECISION TREES FROM HERE
-There are two main packages that are useful in the creation of a decision tree. These are the {tree} and {rpart} (recursive partitioning) packages. For this algorithm, we will be using {rpart} because it provides more flexibility for surrogate splits.
+DECISION TREES FROM HERE There are two main packages that are useful in the creation of a decision tree. These are the {tree} and {rpart} (recursive partitioning) packages. For this algorithm, we will be using {rpart} because it provides more flexibility for surrogate splits.
 
 ```{r}
 df3$target <- as.factor(df3$target)
@@ -637,6 +630,7 @@ treeTestingData <- treeModel %>%
 ```
 
 The tree has been created using the following factors: loudness and speechiness
+
 ```{r}
 # Grow penguin tree via rpart package
 # library(rpart)
@@ -649,8 +643,8 @@ rpartSong1 <- rpart(
 )
 ```
 
-Visualizing the Tree
-We used {rpart.plot} in order to create the visualization for the tree. {rpart.plot} can only be used to the {rpart} class of objects. It will yield the Collection Node style of trees. 
+Visualizing the Tree We used {rpart.plot} in order to create the visualization for the tree. {rpart.plot} can only be used to the {rpart} class of objects. It will yield the Collection Node style of trees.
+
 ```{r}
 # Display rpart.plot ----
 # library(rpart.plot)
@@ -661,8 +655,8 @@ rpart.plot(
 )
 ```
 
+Since CART is susceptible to overfitting, we will try to prune our original tree to find the best sub-tree. the {rpart} function does a cross validation search as a part of the initial tree building process. {rpart} instead focuses on the complexity paraneter (CP). Essentially, this means that we would only retain splits that decrease the lack of fit by at least the same value as CP. This is visualized below using the printcp and plotcp functions from the {rpart} library.
 
-Since CART is susceptible to overfitting, we will try to prune our original tree to find the best sub-tree. the {rpart} function does a cross validation search as a part of the initial tree building process. {rpart} instead focuses on the complexity paraneter (CP). Essentially, this means that we would only retain splits that decrease the lack of fit by at least the same value as CP. This is visualized below using the printcp and plotcp functions from the {rpart} library. 
 ```{r}
 # Get table elements ----
 invisible(capture.output({cpTable <- printcp(rpartSong1)}))
@@ -681,8 +675,8 @@ kable(
     full_width = FALSE
   )
 ```
-This table shows us the complexity parameter(CP) values from the cross validation. For each value, the number of splits, relative error, mean error, and standard deviation of error are shown. 
 
+This table shows us the complexity parameter(CP) values from the cross validation. For each value, the number of splits, relative error, mean error, and standard deviation of error are shown.
 
 ```{r}
 # Plot the CP results from rpart ----
@@ -692,9 +686,10 @@ plotcp(
   upper = "size"
 )
 ```
-Plotting the CP results shows us that we have two choices on where to prune our tree. This is seen as the points that are below the horizontal line, 0.016 and 0.011. We will go with the left-most CP value (0.016) and prune our tree at this point. 
 
-We can now visualize the tree again to see if any changes were made. 
+Plotting the CP results shows us that we have two choices on where to prune our tree. This is seen as the points that are below the horizontal line, 0.016 and 0.011. We will go with the left-most CP value (0.016) and prune our tree at this point.
+
+We can now visualize the tree again to see if any changes were made.
 
 ```{r}
 # Prune the rpart Penguin Tree ----
@@ -703,7 +698,6 @@ rpartSong2 <- prune(
   cp = 0.019
 )
 ```
-
 
 ```{r}
 # Display rpart.plot ----
@@ -714,10 +708,11 @@ rpart.plot(
   extra = 101
 )
 ```
-As you can see, pruning the tree has resulted in a tree of height 4 instead of the original height of 5. Additionally, there are only 4 leaf notes in this tree, whereas there were 5 leaf nodes in the original tree. This is the result of the last delimiter (speechiness >= 0.028) has been removed. 
 
-Testing and Predicting
-We are now going to test our tree model from our original test/train split. This testing is to get an idea of how well our model works in real-world situations. Our evaluation includes understanding two key aspects: prediction and inference. Prediction is about making educated guesses about future events or unknowns using our model, while inference is about drawing conclusions from the data. We will show this in a confusion matrix.
+As you can see, pruning the tree has resulted in a tree of height 4 instead of the original height of 5. Additionally, there are only 4 leaf notes in this tree, whereas there were 5 leaf nodes in the original tree. This is the result of the last delimiter (speechiness \>= 0.028) has been removed.
+
+Testing and Predicting We are now going to test our tree model from our original test/train split. This testing is to get an idea of how well our model works in real-world situations. Our evaluation includes understanding two key aspects: prediction and inference. Prediction is about making educated guesses about future events or unknowns using our model, while inference is about drawing conclusions from the data. We will show this in a confusion matrix.
+
 ```{r}
 # Using the predict function on the testing data ----
 ## The rpart package
@@ -727,7 +722,6 @@ pred_songsRpart2 <- predict(
   type = "prob"
 )
 ```
-
 
 ```{r}
 pred_songsRpart2
@@ -758,7 +752,6 @@ songPredictions <- cbind(
 )
 ```
 
-
 ```{r}
 songPredictions$target <- ifelse(songPredictions$target == 0, "female", "male")
 songPredictions$target <- as.factor(songPredictions$target)
@@ -784,13 +777,14 @@ conf_mat(
     full_width = FALSE
   )
 ```
-This confusion matrix shows that there are 1884 true positives, which indicate that our model correctly predicted 1884 cases to be hits. 
 
-There are 513 false positives, which indicate that 513 cases were incorrectly classified as hits. 
+This confusion matrix shows that there are 1884 true positives, which indicate that our model correctly predicted 1884 cases to be hits.
+
+There are 513 false positives, which indicate that 513 cases were incorrectly classified as hits.
 
 There are 2174 false negatives, which show how many tracks our model incorrectly predicted as as Not Hits.
 
-Lastly, there are 2959 true negatives, which show how many tracks our model correctly predicted as Not Hits. 
+Lastly, there are 2959 true negatives, which show how many tracks our model correctly predicted as Not Hits.
 
 ```{r}
 # Build a data frame with model metrics ----
@@ -832,7 +826,6 @@ modelMetrics <- bind_rows(
 )
 ```
 
-
 ```{r}
 # Make a nice looking table of model metrics ----
 modelMetrics %>%
@@ -853,16 +846,13 @@ modelMetrics %>%
     full_width = FALSE
   )
 ```
-This is a matrix that shows the metrics of our model. Accuracy shows how often our model is correct, sensitivity measures how well our model identifies positives, and
-specificity shows how well our model identifies negatives. These results show that the model has a tendency to incorrectly label tracks as hits even when they are not. However, it is good at identifying tracks that are hits. 
 
-This model could be further improved through pruning the tree further, trying different factors, or using more training data. 
+This is a matrix that shows the metrics of our model. Accuracy shows how often our model is correct, sensitivity measures how well our model identifies positives, and specificity shows how well our model identifies negatives. These results show that the model has a tendency to incorrectly label tracks as hits even when they are not. However, it is good at identifying tracks that are hits.
 
-
-
-
+This model could be further improved through pruning the tree further, trying different factors, or using more training data.
 
 CLUSTERING
+
 ```{r}
 # Extract numeric columns only
 numeric_cols <- df1[sapply(df1, is.numeric)]
@@ -888,12 +878,9 @@ df4 <- princomp(
 summary(df4)
 ```
 
-
 ```{r}
 finalDF <- as.data.frame(scale(df3_numeric))
 ```
-
-
 
 ```{r}
 # Scree plot for spectral decomp approach ----
@@ -904,7 +891,6 @@ fviz_eig(
 )
 ```
 
-
 ```{r}
 # Variable Plot
 # library(factoextra)
@@ -913,7 +899,6 @@ fviz_pca_var(
   axes = c(1, 2)
 )
 ```
-
 
 ```{r}
 # Create a professional looking table of loadings ----
@@ -948,7 +933,6 @@ fviz_pca_biplot(
 # Binding PCA Scores to data frame ----
 ```
 
-
 ```{R}
 ## From Spectral Decomp method; princomp ----
 finalDF <- cbind(
@@ -958,13 +942,11 @@ finalDF <- cbind(
 
 ```
 
-
 ```{r}
 # Make new data frame with just needed columns ----
 df_binary <- df3_numeric %>%
   dplyr::select(contains("energy"), danceability, target)
 ```
-
 
 ```{r}
 # Use dist to form the distance matrix for the penguin data ----
@@ -975,7 +957,6 @@ df_dist <- dist(
 )
 ```
 
-
 ```{r}
 # Hierarchical clustering of Penguins ----
 hc_df <- hclust(
@@ -984,12 +965,10 @@ hc_df <- hclust(
 )
 ```
 
-
 ```{r}
 # Base R ----
 plot(hc_df)
 ```
-
 
 ```{r}
 # Cut hierarchical clustering at 2 and 4 clusters ----
@@ -1000,62 +979,3 @@ df3_numeric_2 <- df3_numeric %>%
     hc4 = as.factor(cutree(tree = hc_df, k = 4))
   )
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
