@@ -124,8 +124,7 @@ df_dist <- dist(
 )
 ```
 
-After the PCA is done, we can continue with unsupervised learning of the data. We chose to proceed with hierarchical clustering of the data, due to using a dataset with all numerical values, as well as clustering without needing to specify or provide the number of clusters formed.
-
+After the PCA is done, we can continue with unsupervised learning of the data. We chose to proceed with hierarchical clustering of the data, due to using a dataset with all numerical values, as well as clustering without needing to specify or provide the number of clusters formed. Hierarchical clustering groups objects into clusters based on the minimum distance between them, it then repeats this process continually, creating bigger and bigger clusters until the entire dataset is in one large cluster. This cluster is used to create visualizations like dendrograms. In our case, we used Chebyshev distance measuring due to the data set having high amounts of entries. 
 
 ```{r}
 # Hierarchical clustering ----
