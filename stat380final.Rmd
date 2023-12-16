@@ -1,7 +1,40 @@
 ---
-title: "R Notebook"
+title: "Final Project"
 output: html_notebook
+authors: "Apurva Sista", "Arya Rao Cheeti", "Aadit Gupta"
 ---
+
+Introduction
+In this project, we will be creating models that can predict if a track is going to be a top 100 hit on Spotify. As undergraduate students, we are constantly looking for music in our daily lives. As such, the kind of music that someone listens to could tell you a lot about the person. Finding out what songs people enjoy listening to (on a global scale) would be able to tell you what the "average person" likes and the general mindset of the world. 
+
+This data was a portion of one that was accessed on Kaggle called "The Spotify Hit Predictor Dataset (1960-2019) uploaded by Farooq Ansari. The original dataset included tables for every decade through 1960-2019. However, we decided to use the 2000s and 2010s tables because that is what is most relatable and interesting to us. Each track is labeled as 1 or 0 (hit or flop, respectively). 
+
+For this dataset, a hit is defined as a song that featured in the weekly list (Issued by Billboards) of Hot-100 tracks in the decade at least once. A flop is defined with the following conditions:
+    - track must not appear in the hit list of the decade
+    - track's artist must not appear in the hit list of the decade
+    - track must belong to a genre that is not mainstream
+    - track's genre must not appear in the hit list of the decade
+    - track must have US as one of its markets
+
+The following is a list of columns in the data:
+    - track
+    - artist
+    - uri (resource identifier)
+    - danceability
+    - energy
+    - key (integers map to pitches using standard Pitch Class notation)
+    - loudness
+    - mode (major or minor)
+    - speechiness
+    - acousticness
+    - instrumentalness
+    - liveness
+    - valence (musical positiveness)
+    - tempo (beats per minute)
+    - time signature (how many beats are in each bar)
+    - chorus_hit (when the chorus starts)
+    - sections
+    - target (if the track is a hit or flop)
 
 ```{r}
 library(dplyr)
@@ -578,6 +611,7 @@ testingData %>%
 
 
 DECISION TREES FROM HERE
+There are two main packages that are useful in the creation of a decision tree. These are the {tree} and {rpart} (recursive partitioning) packages. For this algorithm, we will be using {rpart} because it provides more flexibility for surrogate splits.
 
 ```{r}
 packages <- c("tidyverse", "knitr", "kableExtra", "janitor",
@@ -623,7 +657,7 @@ treeTestingData <- treeModel %>%
   filter(!(track %in% treeTrainingData$track))
 ```
 
-
+The tree has been created using the following factors: loudness and speechiness
 ```{r}
 # Grow penguin tree via rpart package
 # library(rpart)
@@ -636,7 +670,8 @@ rpartSong1 <- rpart(
 )
 ```
 
-
+Visualizing the Tree
+We used {rpart.plot} in order to create the visualization for the tree. {rpart.plot} can only be used to the {rpart} class of objects. It will yield the Collection Node style of trees. 
 ```{r}
 # Display rpart.plot ----
 # library(rpart.plot)
@@ -648,7 +683,7 @@ rpart.plot(
 ```
 
 
-
+Since CART is susceptible to overfitting, we will try to prune our original tree to find the best sub-tree. the {rpart} function does a cross validation search as a part of the initial tree building process. {rpart} instead focuses on the complexity paraneter (CP). Essentially, this means that we would only retain splits that decrease the lack of fit by at least the same value as CP. This is visualized below using the printcp and plotcp functions from the {rpart} library. 
 ```{r}
 # Get table elements ----
 invisible(capture.output({cpTable <- printcp(rpartSong1)}))
@@ -667,7 +702,7 @@ kable(
     full_width = FALSE
   )
 ```
-
+This table shows us the complexity parameter(CP) values from the cross validation. For each value, the number of splits, relative error, mean error, and standard deviation of error are shown. 
 
 
 ```{r}
@@ -678,7 +713,9 @@ plotcp(
   upper = "size"
 )
 ```
+Plotting the CP results shows us that we have two choices on where to prune our tree. This is seen as the points that are below the horizontal line, 0.016 and 0.011. We will go with the left-most CP value (0.016) and prune our tree at this point. 
 
+We can now visualize the tree again to see if any changes were made. 
 
 ```{r}
 # Prune the rpart Penguin Tree ----
@@ -698,9 +735,10 @@ rpart.plot(
   extra = 101
 )
 ```
+As you can see, pruning the tree has resulted in a tree of height 4 instead of the original height of 5. Additionally, there are only 4 leaf notes in this tree, whereas there were 5 leaf nodes in the original tree. This is the result of the last delimiter (speechiness >= 0.028) has been removed. 
 
-
-
+Testing and Predicting
+We are now going to test our tree model from our original test/train split. This testing is to get an idea of how well our model works in real-world situations. Our evaluation includes understanding two key aspects: prediction and inference. Prediction is about making educated guesses about future events or unknowns using our model, while inference is about drawing conclusions from the data. We will show this in a confusion matrix.
 ```{r}
 # Using the predict function on the testing data ----
 ## The rpart package
@@ -756,10 +794,10 @@ conf_mat(
   estimate = rpart2_pred
 )$table %>%
   kable(
-    col.names = c("Prediction/Supervision", "Female", "Male"),
+    col.names = c("Prediction/Supervision", "Hit", "Not a Hit"),
   digits = 3,
   booktabs = TRUE,
-  # caption = "Your caption here",
+  caption = "Confusion Matrix",
   align = "c",
   table.attr = 'data-quarto-disable-processing="true"'
   ) %>%
@@ -767,7 +805,13 @@ conf_mat(
     full_width = FALSE
   )
 ```
+This confusion matrix shows that there are 1884 true positives, which indicate that our model correctly predicted 1884 cases to be hits. 
 
+There are 513 false positives, which indicate that 513 cases were incorrectly classified as hits. 
+
+There are 2174 false negatives, which show how many tracks our model incorrectly predicted as as Not Hits.
+
+Lastly, there are 2959 true negatives, which show how many tracks our model correctly predicted as Not Hits. 
 
 ```{r}
 # Build a data frame with model metrics ----
@@ -822,6 +866,7 @@ modelMetrics %>%
   kable(
     digits = 3,
     booktabs = TRUE,
+    caption = "Model Metrics",
     align = "c",
     table.attr = 'data-quarto-disable-processing="true"'
   ) %>%
@@ -829,14 +874,169 @@ modelMetrics %>%
     full_width = FALSE
   )
 ```
+This is a matrix that shows the metrics of our model. Accuracy shows how often our model is correct, sensitivity measures how well our model identifies positives, and
+specificity shows how well our model identifies negatives. These results show that the model has a tendency to incorrectly label tracks as hits even when they are not. However, it is good at identifying tracks that are hits. 
+
+This model could be further improved through pruning the tree further, trying different factors, or using more training data. 
 
 
 
 
 
+CLUSTERING
+```{r}
+# Principal Component Analysis
+# Load packages used in this guide ----
+packages <- c("tidyverse", "knitr", "kableExtra", "factoextra")
+
+invisible(
+  lapply( 
+    X = packages,
+    FUN = library,
+    character.only = TRUE,
+    quietly = TRUE
+  )
+)
+
+# Set Table Option ----
+options(knitr.kable.NA = "") 
+
+# Extract numeric columns only
+numeric_cols <- df1[sapply(df1, is.numeric)]
+
+# Scale the numeric columns
+stdDF1 <- scale(numeric_cols)
+```
+
+```{r}
+# Center and scale Track data ----
+stdDF1 <- as.data.frame(scale(df3_numeric))
+# PCA via spectral decomposition with Track data ----
+df4 <- princomp(
+  x = stdDF1,
+  cor = FALSE,
+  fix_sign = TRUE,
+  scores = TRUE
+)
+```
+
+```{r}
+## Spectral Decomp ----
+summary(df4)
+```
+
+
+```{r}
+finalDF <- as.data.frame(scale(df3_numeric))
+```
 
 
 
+```{r}
+# Scree plot for spectral decomp approach ----
+# library(factoextra)
+fviz_eig(
+  X = df4,
+  choice = "eigenvalue"
+)
+```
+
+
+```{r}
+# Variable Plot
+# library(factoextra)
+fviz_pca_var(
+  X = df4,
+  axes = c(1, 2)
+)
+```
+
+
+```{r}
+# Create a professional looking table of loadings ----
+## Spectral Decomp; princomp outputs
+as.data.frame.matrix(df4$loadings) %>%
+  tibble::rownames_to_column(var = "Race Event") %>%
+  dplyr::rename_with(
+    .cols = starts_with("Comp."),
+    .fn = ~ gsub(pattern = "Comp.", replacement = "PC ", .x)
+  ) %>%
+  kable(
+    digits = 4,
+    align = c("l", rep("c", 8)),
+    booktab = TRUE,
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic( 
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+```
+
+```{r}
+# Create biplot for the PCA of Men's Track data ----
+# library(factoextra)
+fviz_pca_biplot(
+  X = df4,
+  axes = c(1, 2),
+  repel = TRUE
+)
+
+# Binding PCA Scores to data frame ----
+```
+
+
+```{R}
+## From Spectral Decomp method; princomp ----
+finalDF <- cbind(
+  df4,
+  finalDF$scores[, 1:3]
+)
+
+```
+
+
+```{r}
+# Make new data frame with just needed columns ----
+df_binary <- df3_numeric %>%
+  dplyr::select(contains("energy"), danceability, target)
+```
+
+
+```{r}
+# Use dist to form the distance matrix for the penguin data ----
+
+df_dist <- dist(
+  x = df_binary,
+  method = "maximum" #distance metric
+)
+```
+
+
+```{r}
+# Hierarchical clustering of Penguins ----
+hc_df <- hclust(
+  d = df_dist,
+  method = "complete" #linkage method
+)
+```
+
+
+```{r}
+# Base R ----
+plot(hc_df)
+```
+
+
+```{r}
+# Cut hierarchical clustering at 2 and 4 clusters ----
+## Add categorization to my cleaned data
+df3_numeric_2 <- df3_numeric %>%
+  mutate(
+    hc2 = as.factor(cutree(tree = hc_df, k = 2)),
+    hc4 = as.factor(cutree(tree = hc_df, k = 4))
+  )
+```
 
 
 
