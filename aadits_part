@@ -1,3 +1,4 @@
+Before we can discuss the unsupervised learning method that we used in addition to our other algorithms, we conduct Principal Component Analysis, or PCA, on the data. As our data set is so large, conducting PCA would be helpful to reduce the complexity of the data while retaining most of the information. We began with ensuring that our data is clean and usable, using the df3_numeric data frame, which only contains numeric values. We then standardized the data, centering and scaling, using 'scale' in R. Upon doing so, we then used the new data frame made to create additional visualizations.
 ```{r}
 # Principal Component Analysis
 # Load packages used in this guide ----
@@ -27,16 +28,11 @@ stdDF1 <- scale(numeric_cols)
 stdDF1 <- as.data.frame(scale(df3_numeric))
 # PCA via spectral decomposition with Track data ----
 df4 <- princomp(
-  x = stdTrack,
+  x = stdDF1,
   cor = FALSE,
   fix_sign = TRUE,
   scores = TRUE
 )
-```
-
-```{r}
-## Spectral Decomp ----
-summary(df4)
 ```
 
 
@@ -45,7 +41,7 @@ finalDF <- as.data.frame(scale(df3_numeric))
 ```
 
 
-
+As a result, we were able to create the following scree plot:
 ```{r}
 # Scree plot for spectral decomp approach ----
 # library(factoextra)
@@ -54,7 +50,7 @@ fviz_eig(
   choice = "eigenvalue"
 )
 ```
-
+The scree plot depicts eigenvalues of components of our used dataset, and the different dimensions of the dataset at specific eigenvalues. This plot tells us to look out dimension 1, which has the highest eigenvalue. Additionally, the elbow of the graph appears to level of between dimensions 3 and 4, which make dimensions 3, 2, and 1 significant in how much variation they represent.
 
 ```{r}
 # Variable Plot
@@ -64,13 +60,13 @@ fviz_pca_var(
   axes = c(1, 2)
 )
 ```
-
+Following the scree plot, we created a PCA plot based off of the main variables for a case representing an individual song in the data frame. The graph shows two principal components: Dim1 and Dim2, which stand for Dimension 1 and Dimension 2, respectively. The percentage values in parentheses (21.9% for Dim1 and 11.7% for Dim2) indicate how much of the total variance in the data is captured by each component. Each arrow represents a variable from the original dataset, which represents an attribute of a song. The direction and length of the arrow indicate how each variable influences the principal components. For example, a long arrow means that the variable has a strong influence on the direction and length of the principal component it's pointing towards. The angle between the arrows suggests the correlation between the variables: a smaller angle means a higher positive correlation, a larger angle (closer to 180 degrees) means a higher negative correlation, and a right angle means no correlation. The longest arrows pointing in the direction of Dim1 are loudness, energy, and acousticness, which makes then the most defining attributes to having variance in this data set.
 
 ```{r}
 # Create a professional looking table of loadings ----
 ## Spectral Decomp; princomp outputs
 as.data.frame.matrix(df4$loadings) %>%
-  tibble::rownames_to_column(var = "Race Event") %>%
+  tibble::rownames_to_column(var = "Attribute") %>%
   dplyr::rename_with(
     .cols = starts_with("Comp."),
     .fn = ~ gsub(pattern = "Comp.", replacement = "PC ", .x)
@@ -86,9 +82,11 @@ as.data.frame.matrix(df4$loadings) %>%
     full_width = FALSE
   )
 ```
+Above is a table of loadings displaying attributes of a song and principal components of the data set, giving an attribute value for every component.
+
 
 ```{r}
-# Create biplot for the PCA of Men's Track data ----
+# Create biplot for the PCA of the data ----
 # library(factoextra)
 fviz_pca_biplot(
   X = df4,
@@ -98,7 +96,7 @@ fviz_pca_biplot(
 
 # Binding PCA Scores to data frame ----
 ```
-
+Above is a biplot of the PCA of the data. For reasons to be determined, the attributes chosen for creation of the plot were too case-heavy, resulting in a crowded and difficult to read graph. On a very generalized basis, most of the vectors in the plot appear to be pointing to the sides, which could possibly indicate vectors representing variance in dimension 1. 
 
 ```{R}
 ## From Spectral Decomp method; princomp ----
@@ -118,7 +116,7 @@ df_binary <- df3_numeric %>%
 
 
 ```{r}
-# Use dist to form the distance matrix for the penguin data ----
+# Use dist to form the distance matrix for the  data ----
 
 df_dist <- dist(
   x = df_binary,
@@ -126,9 +124,11 @@ df_dist <- dist(
 )
 ```
 
+After the PCA is done, we can continue with unsupervised learning of the data. We chose to proceed with hierarchical clustering of the data, due to using a dataset with all numerical values, as well as clustering without needing to specify or provide the number of clusters formed.
+
 
 ```{r}
-# Hierarchical clustering of Penguins ----
+# Hierarchical clustering ----
 hc_df <- hclust(
   d = df_dist,
   method = "complete" #linkage method
@@ -140,7 +140,7 @@ hc_df <- hclust(
 # Base R ----
 plot(hc_df)
 ```
-
+Hierarchical clustering was used to help create the dendrogram above, however as stated earlier, the usage of attributes that could be changed, in addition to having possibly selected an incorrent distance metric, has rendered this graphic extremely difficult to read, and therefore not used going forward. Additionally, cutting the dendrogram down based on different k values to cut the clustering also did not yield beneficial results.
 
 ```{r}
 # Cut hierarchical clustering at 2 and 4 clusters ----
