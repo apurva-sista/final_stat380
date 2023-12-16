@@ -1,0 +1,153 @@
+```{r}
+# Principal Component Analysis
+# Load packages used in this guide ----
+packages <- c("tidyverse", "knitr", "kableExtra", "factoextra")
+
+invisible(
+  lapply( 
+    X = packages,
+    FUN = library,
+    character.only = TRUE,
+    quietly = TRUE
+  )
+)
+
+# Set Table Option ----
+options(knitr.kable.NA = "") 
+
+# Extract numeric columns only
+numeric_cols <- df1[sapply(df1, is.numeric)]
+
+# Scale the numeric columns
+stdDF1 <- scale(numeric_cols)
+```
+
+```{r}
+# Center and scale Track data ----
+stdDF1 <- as.data.frame(scale(df3_numeric))
+# PCA via spectral decomposition with Track data ----
+df4 <- princomp(
+  x = stdTrack,
+  cor = FALSE,
+  fix_sign = TRUE,
+  scores = TRUE
+)
+```
+
+```{r}
+## Spectral Decomp ----
+summary(df4)
+```
+
+
+```{r}
+finalDF <- as.data.frame(scale(df3_numeric))
+```
+
+
+
+```{r}
+# Scree plot for spectral decomp approach ----
+# library(factoextra)
+fviz_eig(
+  X = df4,
+  choice = "eigenvalue"
+)
+```
+
+
+```{r}
+# Variable Plot
+# library(factoextra)
+fviz_pca_var(
+  X = df4,
+  axes = c(1, 2)
+)
+```
+
+
+```{r}
+# Create a professional looking table of loadings ----
+## Spectral Decomp; princomp outputs
+as.data.frame.matrix(df4$loadings) %>%
+  tibble::rownames_to_column(var = "Race Event") %>%
+  dplyr::rename_with(
+    .cols = starts_with("Comp."),
+    .fn = ~ gsub(pattern = "Comp.", replacement = "PC ", .x)
+  ) %>%
+  kable(
+    digits = 4,
+    align = c("l", rep("c", 8)),
+    booktab = TRUE,
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic( 
+    latex_options = c("HOLD_position"),
+    full_width = FALSE
+  )
+```
+
+```{r}
+# Create biplot for the PCA of Men's Track data ----
+# library(factoextra)
+fviz_pca_biplot(
+  X = df4,
+  axes = c(1, 2),
+  repel = TRUE
+)
+
+# Binding PCA Scores to data frame ----
+```
+
+
+```{R}
+## From Spectral Decomp method; princomp ----
+finalDF <- cbind(
+  df4,
+  finalDF$scores[, 1:3]
+)
+
+```
+
+
+```{r}
+# Make new data frame with just needed columns ----
+df_binary <- df3_numeric %>%
+  dplyr::select(contains("energy"), danceability, target)
+```
+
+
+```{r}
+# Use dist to form the distance matrix for the penguin data ----
+
+df_dist <- dist(
+  x = df_binary,
+  method = "maximum" #distance metric
+)
+```
+
+
+```{r}
+# Hierarchical clustering of Penguins ----
+hc_df <- hclust(
+  d = df_dist,
+  method = "complete" #linkage method
+)
+```
+
+
+```{r}
+# Base R ----
+plot(hc_df)
+```
+
+
+```{r}
+# Cut hierarchical clustering at 2 and 4 clusters ----
+## Add categorization to my cleaned data
+df3_numeric_2 <- df3_numeric %>%
+  mutate(
+    hc2 = as.factor(cutree(tree = hc_df, k = 2)),
+    hc4 = as.factor(cutree(tree = hc_df, k = 4))
+  )
+```
