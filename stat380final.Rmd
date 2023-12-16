@@ -574,3 +574,325 @@ testingData %>%
   )
 
 ```
+
+
+
+DECISION TREES FROM HERE
+
+```{r}
+packages <- c("tidyverse", "knitr", "kableExtra", "janitor",
+              "tree", "rpart", "rpart.plot", "partykit",
+              "rattle", "randomForest", "yardstick")
+```
+
+
+```{r}
+invisible(
+  lapply( 
+    X = packages,
+    FUN = library,
+    character.only = TRUE,
+    quietly = TRUE
+  )
+)
+```
+
+
+
+```{r}
+df3$target <- as.factor(df3$target)
+
+treeModel <- df3 %>%
+  dplyr::select(!energy) %>%
+  drop_na() %>%
+  mutate(
+    tempID = row_number(),
+    .before = uri
+  )
+```
+
+```{r}
+set.seed(380)
+treeTrainingData <- treeModel %>%
+  group_by(danceability, key, target) %>%
+  slice_sample(prop = 0.8)
+```
+
+```{r}
+treeTestingData <- treeModel %>%
+  filter(!(track %in% treeTrainingData$track))
+```
+
+
+```{r}
+# Grow penguin tree via rpart package
+# library(rpart)
+rpartSong1 <- rpart(
+  formula = target ~ loudness + speechiness,
+  data = treeTrainingData,
+  method = "class",
+  parms = list(split = "information")
+  # control = rpart.control()
+)
+```
+
+
+```{r}
+# Display rpart.plot ----
+# library(rpart.plot)
+rpart.plot(
+  x = rpartSong1,
+  type = 2,
+  extra = 101
+)
+```
+
+
+
+```{r}
+# Get table elements ----
+invisible(capture.output({cpTable <- printcp(rpartSong1)}))
+
+# Create nice looking table of CP results ----
+kable(
+  x = cpTable,
+  col.names = c("CP", "Num. of splits", "Rel. Error",
+                "Mean Error", "Std. Deviation of Error"),
+  digits = 3,
+  booktabs = TRUE,
+  align = "c",
+  table.attr = 'data-quarto-disable-processing="true"'
+) %>%
+  kable_classic(
+    full_width = FALSE
+  )
+```
+
+
+
+```{r}
+# Plot the CP results from rpart ----
+plotcp(
+  x = rpartSong1,
+  minline = TRUE,
+  upper = "size"
+)
+```
+
+
+```{r}
+# Prune the rpart Penguin Tree ----
+rpartSong2 <- prune(
+  tree = rpartSong1,
+  cp = 0.019
+)
+```
+
+
+```{r}
+# Display rpart.plot ----
+# library(rpart.plot)
+rpart.plot(
+  x = rpartSong2,
+  type = 2,
+  extra = 101
+)
+```
+
+
+
+```{r}
+# Using the predict function on the testing data ----
+## The rpart package
+pred_songsRpart2 <- predict(
+  object = rpartSong2,
+  newdata = treeTestingData,
+  type = "prob"
+)
+```
+
+
+```{r}
+pred_songsRpart2
+```
+
+```{r}
+# Data Wrangling the predictions ----
+songPredictions <- data.frame(
+  rpart2_female = pred_songsRpart2[, 1],
+  rpart2_male = pred_songsRpart2[, 2]
+) %>%
+  mutate(
+    rpart2_pred = ifelse(
+      test = rpart2_female > rpart2_male,
+      yes = "female",
+      no = "male"
+    )
+  )
+
+## Set predictions as factors
+songPredictions$rpart2_pred <- as.factor(songPredictions$rpart2_pred)
+
+# Merge supervision column into predictions data frame ----
+songPredictions <- cbind(
+  tempID = treeTestingData$tempID,
+  target = treeTestingData$target,
+  songPredictions
+)
+```
+
+
+```{r}
+songPredictions$target <- ifelse(songPredictions$target == 0, "female", "male")
+songPredictions$target <- as.factor(songPredictions$target)
+```
+
+```{r}
+# Build confusion matrix for second tree model ----
+# library(yardstick)
+conf_mat(
+  data = songPredictions,
+  truth = target,
+  estimate = rpart2_pred
+)$table %>%
+  kable(
+    col.names = c("Prediction/Supervision", "Female", "Male"),
+  digits = 3,
+  booktabs = TRUE,
+  # caption = "Your caption here",
+  align = "c",
+  table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    full_width = FALSE
+  )
+```
+
+
+```{r}
+# Build a data frame with model metrics ----
+songPreds <- songPredictions %>%
+  dplyr::select(tempID, target, contains("_pred")) %>%
+  pivot_longer(
+    cols = !c(tempID, target),
+    names_to = "model",
+    values_to = "prediction"
+  )
+
+accuracy <- songPreds %>%
+  group_by(model) %>%
+  accuracy(
+    truth = target,
+    estimate = prediction
+  )
+
+sensitivity <- songPreds %>%
+  group_by(model) %>%
+  sensitivity(
+    truth = target,
+    estimate = prediction,
+    event_level = "second"
+  )
+
+specificity <- songPreds %>%
+  group_by(model) %>%
+  specificity(
+    truth = target,
+    estimate = prediction,
+    event_level = "second"
+  )
+
+modelMetrics <- bind_rows(
+  accuracy,
+  sensitivity,
+  specificity
+)
+```
+
+
+```{r}
+# Make a nice looking table of model metrics ----
+modelMetrics %>%
+  dplyr::select(model, .metric, .estimate) %>%
+  pivot_wider(
+    id_cols = model,
+    names_from = .metric,
+    values_from = .estimate
+  ) %>%
+  kable(
+    digits = 3,
+    booktabs = TRUE,
+    align = "c",
+    table.attr = 'data-quarto-disable-processing="true"'
+  ) %>%
+  kable_classic(
+    full_width = FALSE
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
