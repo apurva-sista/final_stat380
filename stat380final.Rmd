@@ -42,8 +42,7 @@ library(dplyr)
 
 ```{r}
 # Load packages used in this guide ----
-packages <- c("tidyverse", "knitr", "kableExtra", "leaps",
-              "car", "psych", "DescTools", "pROC", "yardstick", "separationplot")
+packages <- c("tidyverse", "knitr", "kableExtra", "leaps", "car", "psych", "DescTools", "pROC", "yardstick", "separationplot", "janitor","tree", "rpart", "rpart.plot", "partykit","rattle", "randomForest", "factoextra")
 
 invisible(
   lapply( 
@@ -614,26 +613,6 @@ DECISION TREES FROM HERE
 There are two main packages that are useful in the creation of a decision tree. These are the {tree} and {rpart} (recursive partitioning) packages. For this algorithm, we will be using {rpart} because it provides more flexibility for surrogate splits.
 
 ```{r}
-packages <- c("tidyverse", "knitr", "kableExtra", "janitor",
-              "tree", "rpart", "rpart.plot", "partykit",
-              "rattle", "randomForest", "yardstick")
-```
-
-
-```{r}
-invisible(
-  lapply( 
-    X = packages,
-    FUN = library,
-    character.only = TRUE,
-    quietly = TRUE
-  )
-)
-```
-
-
-
-```{r}
 df3$target <- as.factor(df3$target)
 
 treeModel <- df3 %>%
@@ -885,22 +864,6 @@ This model could be further improved through pruning the tree further, trying di
 
 CLUSTERING
 ```{r}
-# Principal Component Analysis
-# Load packages used in this guide ----
-packages <- c("tidyverse", "knitr", "kableExtra", "factoextra")
-
-invisible(
-  lapply( 
-    X = packages,
-    FUN = library,
-    character.only = TRUE,
-    quietly = TRUE
-  )
-)
-
-# Set Table Option ----
-options(knitr.kable.NA = "") 
-
 # Extract numeric columns only
 numeric_cols <- df1[sapply(df1, is.numeric)]
 
